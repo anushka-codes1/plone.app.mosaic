@@ -597,6 +597,35 @@ class Tile {
         this.el.querySelectorAll(".mosaic-btn-settings, .mosaic-btn-delete").forEach(btn => {
             btn.style.display = "block";
         });
+        // If this is a helper/new tile (e.g. during add/copy drag) and the
+        // user cancels, we must remove the helper tile and cleanup the row
+        // to avoid leaving a stray helper that can later be duplicated or
+        // cause incorrect renaming when adding further tiles.
+        try {
+            if (this.el.classList.contains("mosaic-helper-tile-new") || this.el.classList.contains("mosaic-helper-tile")) {
+                // Remove dragging state from panels
+                if (this.mosaic && this.mosaic.panels) {
+                    this.mosaic.panels.removeClass("mosaic-panel-dragging mosaic-panel-dragging-new mosaic-panel-dragging-copy mosaic-panel-dragging-unique");
+                }
+
+                // Remove any selected dividers
+                if (this.mosaic && this.mosaic.document) {
+                    this.mosaic.document.querySelectorAll(".mosaic-selected-divider").forEach(divider => {
+                        divider.classList.remove("mosaic-selected-divider");
+                    });
+                }
+
+                // Get original row and remove this tile element, then cleanup
+                const $orig_row = this.$el.parent().parent();
+                this.$el.remove();
+                if ($orig_row && $orig_row.mosaicCleanupRow) {
+                    $orig_row.mosaicCleanupRow();
+                }
+            }
+        } catch (err) {
+            // be defensive: don't break cancel behaviour if cleanup fails
+            log.warn(`Error during cancel cleanup: ${err}`);
+        }
     }
     deleteClicked(e) {
         e.preventDefault();
