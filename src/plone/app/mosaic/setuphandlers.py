@@ -46,6 +46,32 @@ def post_handler(context):
     portal = context.portal_url.getPortalObject()
     create_ttw_layout_examples(portal)
 
+    # If plone.app.discussion is not installed in the site, remove the
+    # discussion tile entries from the registry so the "Discussion" tile
+    # does not appear in the Mosaic Insert menu (Plone 6.1 makes
+    # plone.app.discussion optional).
+    try:
+        qi = portal.portal_quickinstaller
+    except Exception:
+        qi = None
+
+    if qi is None or not getattr(qi, "isProductInstalled", lambda name: False)(
+        "plone.app.discussion"
+    ):
+        # remove registry records that belong to the discussion tile
+        from plone.registry.interfaces import IRegistry
+        from zope.component import getUtility
+
+        registry = getUtility(IRegistry)
+        prefix = "plone.app.mosaic.app_tiles.plone_app_standardtiles_discussion"
+        for key in tuple(registry.records):
+            if key.startswith(prefix):
+                try:
+                    del registry.records[key]
+                except Exception:
+                    # best-effort: continue if we cannot delete a key
+                    continue
+
 
 def create_ttw_site_layout_examples(portal):
     request = portal.REQUEST
